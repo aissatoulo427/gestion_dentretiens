@@ -1,0 +1,493 @@
+{
+  "info": {
+    "name": "Gestion des entretiens - API",
+    "description": "Collection de l'API de planification des entretiens (ASP.NET Core). Utilise l'environnement 'Gestion entretiens - Local'. Les id crees sont captures automatiquement (recruteurId, candidatId, managerId, demandeId, creneauId, entretienId) : lance les requetes dans l'ordre du scenario. Enums en texte (RH, Presentiel, Favorable...).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5062", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (recruteur/manager) -> capture le token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.environment.set('token', pm.response.json().token);",
+                  "  console.log('token capture, role =', pm.response.json().role);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recruteur.ndiaye@example.com\",\n  \"motDePasse\": \"Secret123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Renvoie un JWT. Le token est capture automatiquement dans la variable {{token}} et reutilise par toutes les autres requetes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Personnes",
+      "item": [
+        {
+          "name": "Creer un recruteur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  pm.environment.set('recruteurId', pm.response.json().id);",
+                  "  console.log('recruteurId =', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Ndiaye\",\n  \"email\": \"recruteur.ndiaye@example.com\",\n  \"motDePasse\": \"Secret123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/personnes/recruteurs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "personnes", "recruteurs"]
+            },
+            "description": "Inscription (endpoint public). A faire AVANT le login."
+          }
+        },
+        {
+          "name": "Creer un candidat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  pm.environment.set('candidatId', pm.response.json().id);",
+                  "  console.log('candidatId =', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Diop\",\n  \"prenom\": \"Awa\",\n  \"email\": \"awa.diop@example.com\",\n  \"telephone\": \"770000000\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/personnes/candidats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "personnes", "candidats"]
+            }
+          }
+        },
+        {
+          "name": "Creer un manager",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  pm.environment.set('managerId', pm.response.json().id);",
+                  "  console.log('managerId =', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Fall\",\n  \"email\": \"manager.fall@example.com\",\n  \"motDePasse\": \"Secret123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/personnes/managers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "personnes", "managers"]
+            },
+            "description": "Inscription (endpoint public)."
+          }
+        },
+        {
+          "name": "Lister les candidats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/personnes/candidats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "personnes", "candidats"]
+            }
+          }
+        },
+        {
+          "name": "Lister les recruteurs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/personnes/recruteurs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "personnes", "recruteurs"]
+            }
+          }
+        },
+        {
+          "name": "Lister les managers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/personnes/managers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "personnes", "managers"]
+            }
+          }
+        },
+        {
+          "name": "Lire une personne par id (candidat)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/personnes/{{candidatId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "personnes", "{{candidatId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Demandes",
+      "item": [
+        {
+          "name": "Lister toutes les demandes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/demandes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "demandes"]
+            }
+          }
+        },
+        {
+          "name": "Creer une demande",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  pm.environment.set('demandeId', pm.response.json().id);",
+                  "  console.log('demandeId =', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recruteurId\": {{recruteurId}},\n  \"candidatId\": {{candidatId}},\n  \"poste\": \"Developpeur .NET\",\n  \"typeEntretien\": \"RH\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/demandes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "demandes"]
+            },
+            "description": "typeEntretien : RH | Technique | Managerial"
+          }
+        },
+        {
+          "name": "Lire une demande par id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/demandes/{{demandeId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "demandes", "{{demandeId}}"]
+            }
+          }
+        },
+        {
+          "name": "Creneaux disponibles d'une demande",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/demandes/{{demandeId}}/creneaux-disponibles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "demandes", "{{demandeId}}", "creneaux-disponibles"]
+            }
+          }
+        },
+        {
+          "name": "Annuler une demande",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/demandes/{{demandeId}}/annuler",
+              "host": ["{{base_url}}"],
+              "path": ["api", "demandes", "{{demandeId}}", "annuler"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Creneaux",
+      "item": [
+        {
+          "name": "Lister tous les creneaux",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/creneaux",
+              "host": ["{{base_url}}"],
+              "path": ["api", "creneaux"]
+            }
+          }
+        },
+        {
+          "name": "Lire un creneau par id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/creneaux/{{creneauId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "creneaux", "{{creneauId}}"]
+            }
+          }
+        },
+        {
+          "name": "Definir une disponibilite (creer un creneau)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  pm.environment.set('creneauId', pm.response.json().id);",
+                  "  console.log('creneauId =', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recruteurId\": {{recruteurId}},\n  \"dateDebut\": \"2026-07-20T09:00:00\",\n  \"dateFin\": \"2026-07-20T10:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/creneaux",
+              "host": ["{{base_url}}"],
+              "path": ["api", "creneaux"]
+            }
+          }
+        },
+        {
+          "name": "Proposer un creneau a une demande",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/creneaux/{{creneauId}}/proposer?demandeId={{demandeId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "creneaux", "{{creneauId}}", "proposer"],
+              "query": [{ "key": "demandeId", "value": "{{demandeId}}" }]
+            },
+            "description": "L'id du creneau est dans l'URL ; la demande cible est passee en query string."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Entretiens",
+      "item": [
+        {
+          "name": "Planifier un entretien",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  pm.environment.set('entretienId', pm.response.json().id);",
+                  "  console.log('entretienId =', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"demandeId\": {{demandeId}},\n  \"creneauId\": {{creneauId}},\n  \"dateHeure\": \"2026-07-20T09:00:00\",\n  \"modalite\": \"Presentiel\",\n  \"lieuOuLien\": \"Salle A / https://meet.example.com/abc\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entretiens",
+              "host": ["{{base_url}}"],
+              "path": ["api", "entretiens"]
+            },
+            "description": "modalite : Presentiel | Distanciel | Telephone"
+          }
+        },
+        {
+          "name": "Lister tous les entretiens",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/entretiens",
+              "host": ["{{base_url}}"],
+              "path": ["api", "entretiens"]
+            }
+          }
+        },
+        {
+          "name": "Lire un entretien par id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/entretiens/{{entretienId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "entretiens", "{{entretienId}}"]
+            }
+          }
+        },
+        {
+          "name": "Confirmer un entretien",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/entretiens/{{entretienId}}/confirmer",
+              "host": ["{{base_url}}"],
+              "path": ["api", "entretiens", "{{entretienId}}", "confirmer"]
+            }
+          }
+        },
+        {
+          "name": "Reprogrammer un entretien",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nouveauCreneauId\": {{creneauId}},\n  \"nouvelleDateHeure\": \"2026-07-21T14:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entretiens/{{entretienId}}/reprogrammer",
+              "host": ["{{base_url}}"],
+              "path": ["api", "entretiens", "{{entretienId}}", "reprogrammer"]
+            },
+            "description": "nouveauCreneauId doit idealement etre un AUTRE creneau (cree un 2e creneau au prealable)."
+          }
+        },
+        {
+          "name": "Envoyer un rappel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/entretiens/{{entretienId}}/rappel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "entretiens", "{{entretienId}}", "rappel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feedbacks",
+      "item": [
+        {
+          "name": "Saisir un feedback",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entretienId\": {{entretienId}},\n  \"auteurId\": {{managerId}},\n  \"note\": 4,\n  \"commentaire\": \"Bon profil technique, a confirmer sur la partie communication.\",\n  \"decision\": \"Favorable\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/feedbacks",
+              "host": ["{{base_url}}"],
+              "path": ["api", "feedbacks"]
+            },
+            "description": "note : 0..5 ; decision : Favorable | Defavorable | ARevoir ; auteurId doit etre un recruteur ou un manager (ici le manager)."
+          }
+        },
+        {
+          "name": "Lister les feedbacks d'un entretien",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/feedbacks?entretienId={{entretienId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "feedbacks"],
+              "query": [{ "key": "entretienId", "value": "{{entretienId}}" }]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
