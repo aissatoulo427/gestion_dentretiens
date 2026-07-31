@@ -27,7 +27,12 @@ namespace Gestion_dentretiens.Data
         // Sous-types de Personne (mappés en TPH dans la même table Personnes) :
         // exposés en DbSet pour que les services puissent écrire _db.Candidats, etc.
         public DbSet<Candidat> Candidats => Set<Candidat>();
-        public DbSet<Recruteur> Recruteurs => Set<Recruteur>();
+        // Employe est abstraite : le DbSet sert à interroger « tous les comptes »
+        // (RH + évaluateurs techniques + managers) sans tester les sous-types.
+        public DbSet<Employe> Employes => Set<Employe>();
+        public DbSet<Admin> Admins => Set<Admin>();
+        public DbSet<RH> RHs => Set<RH>();
+        public DbSet<EvaluateurTechnique> EvaluateursTechniques => Set<EvaluateurTechnique>();
         public DbSet<Manager> Managers => Set<Manager>();
         public DbSet<DemandeEntretien> Demandes => Set<DemandeEntretien>();
         public DbSet<Creneau> Creneaux => Set<Creneau>();
@@ -36,15 +41,19 @@ namespace Gestion_dentretiens.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Sous-types de Personne (TPH).
+            // Sous-types de Personne (TPH) : Candidat d'un côté, Employe (abstraite)
+            // et ses trois sous-types de l'autre. Tout reste dans la table Personnes.
             modelBuilder.Entity<Candidat>();
-            modelBuilder.Entity<Recruteur>();
+            modelBuilder.Entity<Employe>();
+            modelBuilder.Entity<Admin>();
+            modelBuilder.Entity<RH>();
+            modelBuilder.Entity<EvaluateurTechnique>();
             modelBuilder.Entity<Manager>();
 
             // --- DemandeEntretien ---
             modelBuilder.Entity<DemandeEntretien>()
-                .HasOne(d => d.Recruteur).WithMany(r => r.Demandes)
-                .HasForeignKey(d => d.RecruteurId).OnDelete(DeleteBehavior.Restrict);
+                .HasOne(d => d.RH).WithMany(r => r.Demandes)
+                .HasForeignKey(d => d.RhId).OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<DemandeEntretien>()
                 .HasOne(d => d.Candidat).WithMany(c => c.Demandes)
@@ -52,25 +61,28 @@ namespace Gestion_dentretiens.Data
 
             // --- Creneau ---
             modelBuilder.Entity<Creneau>()
-                .HasOne(c => c.Recruteur).WithMany(r => r.Creneaux)
-                .HasForeignKey(c => c.RecruteurId).OnDelete(DeleteBehavior.Restrict);
+                .HasOne(c => c.Employe).WithMany(e => e.Creneaux)
+                .HasForeignKey(c => c.EmployeId).OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Creneau>()
                 .HasOne(c => c.DemandeEntretien).WithMany(d => d.Creneaux)
                 .HasForeignKey(c => c.DemandeEntretienId).OnDelete(DeleteBehavior.Restrict);
 
             // --- Entretien ---
+            // Une demande donne lieu à plusieurs tours d'entretien (1-n).
             modelBuilder.Entity<Entretien>()
-                .HasOne(e => e.DemandeEntretien).WithMany()
+                .HasOne(e => e.DemandeEntretien).WithMany(d => d.Entretiens)
                 .HasForeignKey(e => e.DemandeEntretienId).OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Entretien>()
                 .HasOne(e => e.Candidat).WithMany(c => c.Entretiens)
                 .HasForeignKey(e => e.CandidatId).OnDelete(DeleteBehavior.Restrict);
 
+            // Le panel : N-N entre l'entretien et les employés qui l'évaluent.
+            // EF génère la table de jointure, il n'y a pas de classe d'association à écrire.
             modelBuilder.Entity<Entretien>()
-                .HasOne(e => e.Recruteur).WithMany(r => r.Entretiens)
-                .HasForeignKey(e => e.RecruteurId).OnDelete(DeleteBehavior.Restrict);
+                .HasMany(e => e.Evaluateurs).WithMany(p => p.Entretiens)
+                .UsingEntity(j => j.ToTable("EntretienEvaluateurs"));
 
             modelBuilder.Entity<Entretien>()
                 .HasOne(e => e.Creneau).WithMany()

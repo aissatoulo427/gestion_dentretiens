@@ -9,9 +9,10 @@ namespace Gestion_dentretiens.Models
         public DateTime DateFin { get; set; }
         public bool Disponible { get; set; }
 
-        // Défini par 1 recruteur.
-        public int RecruteurId { get; set; }
-        public virtual Recruteur Recruteur { get; set; }
+        // Défini par 1 employé, quel que soit son rôle : RH, évaluateur technique ou
+        // manager posent tous leurs disponibilités.
+        public int EmployeId { get; set; }
+        public virtual Employe Employe { get; set; }
 
         // Optionnellement proposé pour une demande (0..n créneaux par demande).
         public int? DemandeEntretienId { get; set; }

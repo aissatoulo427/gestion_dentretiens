@@ -11,11 +11,11 @@ namespace Gestion_dentretiens.Models
         public Decision Decision { get; set; }
         public DateTime DateSaisie { get; set; }
 
-        // Porte sur 1 entretien, saisi par 1 auteur (Recruteur ou Manager, donc Personne).
+        // Porte sur 1 entretien, saisi par 1 employé qui était présent à cet entretien.
         public int EntretienId { get; set; }
         public virtual Entretien Entretien { get; set; }
 
         public int AuteurId { get; set; }
-        public virtual Personne Auteur { get; set; }
+        public virtual Employe Auteur { get; set; }
     }
 }

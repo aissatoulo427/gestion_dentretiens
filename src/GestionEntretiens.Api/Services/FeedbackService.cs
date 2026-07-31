@@ -4,6 +4,7 @@ using System.Linq;
 using Gestion_dentretiens.Data;
 using Gestion_dentretiens.Models;
 using Gestion_dentretiens.Models.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Gestion_dentretiens.Services
 {
@@ -19,18 +20,24 @@ namespace Gestion_dentretiens.Services
 
         /// <summary>
         /// Enregistre un feedback pour un entretien.
-        /// Vérifie que la note est valide (0..5) et que l'auteur est un recruteur ou un manager.
+        /// Vérifie que la note est valide (0..5) et que l'auteur faisait bien partie du
+        /// panel de cet entretien : on ne commente que ce à quoi on a assisté.
         /// </summary>
         public Feedback SaisirFeedback(int entretienId, int auteurId, int note, string commentaire, Decision decision)
         {
-            if (note < 0 || note > 5) throw new ArgumentOutOfRangeException(nameof(note), "La note doit être comprise entre 0 et 5.");
+            // InvalidOperationException et non ArgumentOutOfRangeException : cette dernière
+            // suffixe le message avec "(Parameter 'note')", qui finirait affiché à l'utilisateur.
+            if (note < 0 || note > 5)
+                throw new InvalidOperationException("La note doit être comprise entre 0 et 5.");
 
-            var entretien = _db.Entretiens.Find(entretienId);
+            // Include : il faut charger le panel pour pouvoir le tester.
+            var entretien = _db.Entretiens
+                .Include(e => e.Evaluateurs)
+                .FirstOrDefault(e => e.Id == entretienId);
             if (entretien == null) throw new InvalidOperationException("Entretien introuvable.");
 
-            var auteur = _db.Personnes.Find(auteurId);
-            if (!(auteur is Recruteur || auteur is Manager))
-                throw new InvalidOperationException("Seul un recruteur ou un manager peut saisir un feedback.");
+            if (!entretien.Evaluateurs.Any(e => e.Id == auteurId))
+                throw new InvalidOperationException("Seul un évaluateur présent à l'entretien peut saisir un compte-rendu.");
 
             var feedback = new Feedback
             {

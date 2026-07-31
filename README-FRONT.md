@@ -1,5 +1,13 @@
 # API Gestion des entretiens — Guide pour l'équipe Front
 
+> ⚠️ **Document supplanté par [`docs/contrat-api-front.md`](docs/contrat-api-front.md).**
+> Les noms de rôles et d'endpoints ci-dessous ont été remis à jour, mais plusieurs autres
+> passages datent d'avant les évolutions du modèle et sont **faux** : le corps d'une `400`
+> n'est plus du texte brut mais `{ succes, message }` ; `EntretienDto` ne contient plus de
+> `recruteurId` ; une demande donne lieu à **plusieurs** entretiens et non un seul ; les
+> actions renvoient `200` et non `204`.
+> En cas de désaccord entre les deux fichiers, **`docs/contrat-api-front.md` fait foi**.
+
 Ce document décrit l'API REST à consommer depuis le front. Backend : **ASP.NET Core** (.NET 10) + PostgreSQL.
 
 ---
@@ -30,12 +38,12 @@ Authorization: Bearer <token>
 
 **Endpoints publics (sans token) :**
 - `POST /api/auth/login` — se connecter
-- `POST /api/personnes/recruteurs` et `POST /api/personnes/managers` — inscription d'un compte staff
+- `POST /api/personnes/rh`, `POST /api/personnes/evaluateurs-techniques` et `POST /api/personnes/managers` — inscription d'un compte staff
 
 **Tout le reste exige un token valide** (sinon `401 Unauthorized`).
 
 ### Se connecter
-Seuls les **recruteurs** et **managers** ont un compte.
+Seuls les employés — **RH**, **évaluateurs techniques** et **managers** — ont un compte.
 
 `POST /api/auth/login`
 ```json
@@ -46,7 +54,7 @@ Réponse `200` :
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
   "expiration": "2026-07-17T20:33:50",
-  "role": "Recruteur"
+  "role": "RH"
 }
 ```
 - Identifiants invalides / compte inexistant → `401 Unauthorized`.
@@ -65,7 +73,7 @@ const res = await fetch(`${baseUrl}/api/entretiens`, {
 ## 2. Conventions générales
 
 - **Format** : JSON en entrée et en sortie. Mettez l'en-tête `Content-Type: application/json` sur les POST avec body.
-- **Nommage JSON** : les propriétés sont en **camelCase** (`dateHeure`, `recruteurId`…).
+- **Nommage JSON** : les propriétés sont en **camelCase** (`dateHeure`, `rhId`…).
 - **Les enums sont envoyés/reçus en TEXTE**, pas en nombre. Ex. `"typeEntretien": "RH"` (voir §4).
 - **Dates** : format ISO 8601, ex. `"2026-07-20T09:00:00"`.
 - **Identifiants** : entiers auto-incrémentés (`id`).
@@ -92,8 +100,10 @@ const res = await fetch(`${baseUrl}/api/entretiens`, {
 |---|---|---|
 | `GET` | `/api/personnes/candidats` | Liste des candidats |
 | `POST` | `/api/personnes/candidats` | Créer un candidat |
-| `GET` | `/api/personnes/recruteurs` | Liste des recruteurs |
-| `POST` | `/api/personnes/recruteurs` | Créer un recruteur |
+| `GET` | `/api/personnes/rh` | Liste des RH |
+| `GET` | `/api/personnes/evaluateurs-techniques` | Liste des évaluateurs techniques |
+| `POST` | `/api/personnes/rh` | Créer un RH |
+| `POST` | `/api/personnes/evaluateurs-techniques` | Créer un évaluateur technique |
 | `GET` | `/api/personnes/managers` | Liste des managers |
 | `POST` | `/api/personnes/managers` | Créer un manager |
 | `GET` | `/api/personnes/{id}` | Lire une personne (n'importe quel type) |
@@ -107,7 +117,7 @@ Réponse `201` :
 { "id": 1, "nom": "Diop", "prenom": "Awa", "email": "awa.diop@example.com", "telephone": "770000000" }
 ```
 
-**POST recruteur / manager** (inscription, **endpoint public**) — body :
+**POST RH / évaluateur technique / manager** (inscription, **endpoint public**) — body :
 ```json
 { "nom": "Ndiaye", "email": "recruteur.ndiaye@example.com", "motDePasse": "Secret123!" }
 ```
@@ -118,7 +128,7 @@ Réponse `201` : `{ "id": 1, "nom": "Ndiaye", "email": "recruteur.ndiaye@example
 ```json
 { "id": 1, "nom": "Diop", "email": "awa.diop@example.com", "type": "Candidat" }
 ```
-(`type` = `Candidat` | `Recruteur` | `Manager`)
+(`type` = `Candidat` | `RH` | `EvaluateurTechnique` | `Manager`)
 
 ---
 
@@ -134,14 +144,14 @@ Réponse `201` : `{ "id": 1, "nom": "Ndiaye", "email": "recruteur.ndiaye@example
 
 **POST** — body :
 ```json
-{ "recruteurId": 1, "candidatId": 1, "poste": "Développeur .NET", "typeEntretien": "RH" }
+{ "candidatId": 1, "poste": "Développeur .NET" }
 ```
 Réponse `201` (DemandeDto) :
 ```json
 {
   "id": 1, "poste": "Développeur .NET", "typeEntretien": "RH",
   "dateCreation": "2026-07-17T10:00:00", "statut": "Creee",
-  "recruteurId": 1, "candidatId": 1
+  "rhId": 1, "candidatId": 1
 }
 ```
 
@@ -153,18 +163,19 @@ Réponse `201` (DemandeDto) :
 |---|---|---|
 | `GET` | `/api/creneaux` | Liste de tous les créneaux |
 | `GET` | `/api/creneaux/{id}` | Lire un créneau |
-| `POST` | `/api/creneaux` | Le recruteur définit une disponibilité (nouveau créneau) |
+| `POST` | `/api/creneaux` | Un employé définit une disponibilité (nouveau créneau) |
 | `POST` | `/api/creneaux/{id}/proposer?demandeId={demandeId}` | Rattacher le créneau à une demande |
 
 **POST** — body :
 ```json
-{ "recruteurId": 1, "dateDebut": "2026-07-20T09:00:00", "dateFin": "2026-07-20T10:00:00" }
+{ "dateDebut": "2026-07-20T09:00:00", "dateFin": "2026-07-20T10:00:00" }
 ```
+`employeId` n'est pas dans la requête : le créneau est celui de l'employé connecté (lu dans le token). Tous les rôles peuvent en poser.
 Réponse `200` (CreneauDto) :
 ```json
 {
   "id": 1, "dateDebut": "2026-07-20T09:00:00", "dateFin": "2026-07-20T10:00:00",
-  "disponible": true, "recruteurId": 1, "demandeEntretienId": null
+  "disponible": true, "employeId": 1, "demandeEntretienId": null
 }
 ```
 
@@ -186,10 +197,12 @@ Réponse `200` (CreneauDto) :
 **POST (planifier)** — body :
 ```json
 {
-  "demandeId": 1, "creneauId": 1, "dateHeure": "2026-07-20T09:00:00",
-  "modalite": "Presentiel", "lieuOuLien": "Salle A"
+  "demandeId": 1, "creneauId": 1,
+  "modalite": "Presentiel", "lieuOuLien": "Salle A",
+  "typeEntretien": "Technique", "evaluateurIds": [1]
 }
 ```
+`dateHeure` n'est pas dans la requête : l'horaire est celui du `dateDebut` du créneau.
 Réponse `201` (EntretienDto) :
 ```json
 {
@@ -201,7 +214,7 @@ Réponse `201` (EntretienDto) :
 
 **POST (reprogrammer)** — body :
 ```json
-{ "nouveauCreneauId": 2, "nouvelleDateHeure": "2026-07-21T14:00:00" }
+{ "nouveauCreneauId": 2 }
 ```
 → `204`. **confirmer** et **rappel** : sans body → `204`.
 
@@ -219,7 +232,7 @@ Réponse `201` (EntretienDto) :
 **POST** — body :
 ```json
 {
-  "entretienId": 1, "auteurId": 1, "note": 4,
+  "entretienId": 1, "note": 4,
   "commentaire": "Bon profil technique.", "decision": "Favorable"
 }
 ```
@@ -231,7 +244,8 @@ Réponse `200` (FeedbackDto) :
   "entretienId": 1, "auteurId": 1
 }
 ```
-> `note` doit être entre **0 et 5**. `auteurId` doit être un **recruteur** ou un **manager** (sinon `400`).
+> `note` doit être entre **0 et 5**. `auteurId` n'est pas dans la requête : l'auteur est
+> l'utilisateur connecté, qui doit faire partie du panel de l'entretien (sinon `400`).
 
 ---
 
@@ -250,15 +264,15 @@ Réponse `200` (FeedbackDto) :
 ## 5. Scénario type (ordre d'appel)
 
 ```
-1. POST /api/personnes/recruteurs      → récupère recruteurId
+1. POST /api/personnes/rh              → récupère rhId
 2. POST /api/personnes/candidats       → récupère candidatId
 3. POST /api/personnes/managers        → récupère managerId
-4. POST /api/demandes                  → récupère demandeId  (utilise recruteurId + candidatId)
-5. POST /api/creneaux                  → récupère creneauId  (utilise recruteurId)
+4. POST /api/demandes                  → récupère demandeId  (le RH du token + candidatId)
+5. POST /api/creneaux                  → récupère creneauId  (l'employé du token)
 6. POST /api/creneaux/{creneauId}/proposer?demandeId={demandeId}
 7. POST /api/entretiens                → récupère entretienId (utilise demandeId + creneauId)
 8. POST /api/entretiens/{entretienId}/confirmer
-9. POST /api/feedbacks                 (auteurId = recruteur ou manager)
+9. POST /api/feedbacks                 (auteur = utilisateur du token, doit être du panel)
 ```
 
 ---

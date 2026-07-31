@@ -1,10 +1,16 @@
 namespace Gestion_dentretiens.Models
 {
     /// <summary>
-    /// Le manager consulte les comptes-rendus et peut aussi saisir un feedback
-    /// (ces opérations sont orchestrées par la couche Services).
+    /// Le manager : le futur responsable hiérarchique du candidat. Il siège au tour
+    /// managérial et y saisit son compte-rendu — un entretien de ce type exige sa
+    /// présence au panel. Le tour technique revient désormais à
+    /// <see cref="EvaluateurTechnique"/>.
+    ///
+    /// Il peut malgré tout siéger aux autres tours : la règle de composition impose une
+    /// présence, elle n'exclut personne. Les créneaux et les entretiens sont hérités
+    /// d'<see cref="Employe"/>.
     /// </summary>
-    public class Manager : Personne
+    public class Manager : Employe
     {
     }
 }

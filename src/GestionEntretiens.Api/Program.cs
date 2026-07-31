@@ -55,7 +55,12 @@ builder.Services.AddSingleton<IEmailService>(sp =>
 });
 
 // --- API : controllers + enums en texte + dates au format uniforme ---
-builder.Services.AddControllers().AddJsonOptions(o =>
+builder.Services.AddControllers(o =>
+{
+    // Traduit les exceptions métier des services en 400 { succes, message },
+    // pour que toutes les erreurs de l'API aient la même forme.
+    o.Filters.Add<Gestion_dentretiens.Api.Filters.ErreurMetierFilter>();
+}).AddJsonOptions(o =>
 {
     // Enums sérialisés en texte (ex. "Planifie" au lieu de 0).
     o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -94,6 +99,31 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    // --- Amorçage de l'administrateur ---
+    // Aucun endpoint ne crée de compte sans être authentifié : il faut donc que le premier
+    // compte existe avant toute connexion. C'est le rôle de l'admin, seul compte à recevoir
+    // son mot de passe directement (de la configuration), sans passer par un e-mail — ce qui
+    // garantit qu'une panne SMTP ne peut enfermer personne dehors.
+    var personnes = scope.ServiceProvider.GetRequiredService<IPersonneService>();
+    if (!personnes.ExisteUnAdmin())
+    {
+        var email = builder.Configuration["Admin:Email"];
+        var motDePasse = builder.Configuration["Admin:MotDePasse"];
+
+        // Échec bruyant plutôt que silencieux : démarrer sans admin laisserait l'application
+        // inutilisable — plus aucun compte ne pourrait être créé — sans rien qui l'explique.
+        // La configuration n'est exigée QUE dans ce cas : une base déjà amorcée démarre sans.
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(motDePasse))
+        {
+            throw new InvalidOperationException(
+                "Aucun administrateur en base et aucun compte d'amorçage configuré. " +
+                "Renseignez Admin:Email et Admin:MotDePasse (secrets utilisateur en " +
+                "développement, variables d'environnement en déploiement) puis relancez.");
+        }
+
+        personnes.CreerAdmin("Administrateur", email, motDePasse);
+    }
 }
 
 if (app.Environment.IsDevelopment())

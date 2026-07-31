@@ -3,17 +3,20 @@ using System;
 using Gestion_dentretiens.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace GestionEntretiens.Infrastructure.Migrations
+namespace GestionEntretiens.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260731115114_RefonteRolesRhEvaluateurTechnique")]
+    partial class RefonteRolesRhEvaluateurTechnique
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -237,13 +240,6 @@ namespace GestionEntretiens.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasDiscriminator().HasValue("Employe");
-                });
-
-            modelBuilder.Entity("Gestion_dentretiens.Models.Admin", b =>
-                {
-                    b.HasBaseType("Gestion_dentretiens.Models.Employe");
-
-                    b.HasDiscriminator().HasValue("Admin");
                 });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.EvaluateurTechnique", b =>

@@ -3,17 +3,20 @@ using System;
 using Gestion_dentretiens.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace GestionEntretiens.Infrastructure.Migrations
+namespace GestionEntretiens.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260730110150_PanelEvaluateursEtTours")]
+    partial class PanelEvaluateursEtTours
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,14 +60,14 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.Property<bool>("Disponible")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("EmployeId")
+                    b.Property<int>("RecruteurId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DemandeEntretienId");
 
-                    b.HasIndex("EmployeId");
+                    b.HasIndex("RecruteurId");
 
                     b.ToTable("Creneaux");
                 });
@@ -86,7 +89,7 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.Property<string>("Poste")
                         .HasColumnType("text");
 
-                    b.Property<int>("RhId")
+                    b.Property<int>("RecruteurId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Statut")
@@ -96,7 +99,7 @@ namespace GestionEntretiens.Infrastructure.Migrations
 
                     b.HasIndex("CandidatId");
 
-                    b.HasIndex("RhId");
+                    b.HasIndex("RecruteurId");
 
                     b.ToTable("Demandes");
                 });
@@ -189,8 +192,8 @@ namespace GestionEntretiens.Infrastructure.Migrations
 
                     b.Property<string>("Discriminator")
                         .IsRequired()
-                        .HasMaxLength(21)
-                        .HasColumnType("character varying(21)");
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
 
                     b.Property<string>("Email")
                         .HasColumnType("text");
@@ -239,20 +242,6 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.HasDiscriminator().HasValue("Employe");
                 });
 
-            modelBuilder.Entity("Gestion_dentretiens.Models.Admin", b =>
-                {
-                    b.HasBaseType("Gestion_dentretiens.Models.Employe");
-
-                    b.HasDiscriminator().HasValue("Admin");
-                });
-
-            modelBuilder.Entity("Gestion_dentretiens.Models.EvaluateurTechnique", b =>
-                {
-                    b.HasBaseType("Gestion_dentretiens.Models.Employe");
-
-                    b.HasDiscriminator().HasValue("EvaluateurTechnique");
-                });
-
             modelBuilder.Entity("Gestion_dentretiens.Models.Manager", b =>
                 {
                     b.HasBaseType("Gestion_dentretiens.Models.Employe");
@@ -260,11 +249,11 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.HasDiscriminator().HasValue("Manager");
                 });
 
-            modelBuilder.Entity("Gestion_dentretiens.Models.RH", b =>
+            modelBuilder.Entity("Gestion_dentretiens.Models.Recruteur", b =>
                 {
                     b.HasBaseType("Gestion_dentretiens.Models.Employe");
 
-                    b.HasDiscriminator().HasValue("RH");
+                    b.HasDiscriminator().HasValue("Recruteur");
                 });
 
             modelBuilder.Entity("EmployeEntretien", b =>
@@ -289,15 +278,15 @@ namespace GestionEntretiens.Infrastructure.Migrations
                         .HasForeignKey("DemandeEntretienId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Gestion_dentretiens.Models.Employe", "Employe")
+                    b.HasOne("Gestion_dentretiens.Models.Recruteur", "Recruteur")
                         .WithMany("Creneaux")
-                        .HasForeignKey("EmployeId")
+                        .HasForeignKey("RecruteurId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("DemandeEntretien");
 
-                    b.Navigation("Employe");
+                    b.Navigation("Recruteur");
                 });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.DemandeEntretien", b =>
@@ -308,15 +297,15 @@ namespace GestionEntretiens.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Gestion_dentretiens.Models.RH", "RH")
+                    b.HasOne("Gestion_dentretiens.Models.Recruteur", "Recruteur")
                         .WithMany("Demandes")
-                        .HasForeignKey("RhId")
+                        .HasForeignKey("RecruteurId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Candidat");
 
-                    b.Navigation("RH");
+                    b.Navigation("Recruteur");
                 });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.Entretien", b =>
@@ -383,13 +372,10 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.Navigation("Entretiens");
                 });
 
-            modelBuilder.Entity("Gestion_dentretiens.Models.Employe", b =>
+            modelBuilder.Entity("Gestion_dentretiens.Models.Recruteur", b =>
                 {
                     b.Navigation("Creneaux");
-                });
 
-            modelBuilder.Entity("Gestion_dentretiens.Models.RH", b =>
-                {
                     b.Navigation("Demandes");
                 });
 #pragma warning restore 612, 618

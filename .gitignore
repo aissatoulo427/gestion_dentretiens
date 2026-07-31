@@ -22,3 +22,9 @@ project.assets.json
 
 # Logs
 *.log
+
+# Secrets locaux : jamais versionnés.
+# Les secrets de ce projet vivent dans les secrets utilisateur .NET (hors du dépôt),
+# pas ici — voir docs/configuration.md. Ces règles restent par précaution.
+.env
+.env.local

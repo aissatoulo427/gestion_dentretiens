@@ -33,12 +33,45 @@ namespace Gestion_dentretiens.Services
                 return;
             }
 
+            // Pas de mot de passe SMTP configuré : on trace le message dans la console
+            // au lieu de planter. Pratique en dev/démo, sans rien changer au code appelant.
+            if (string.IsNullOrWhiteSpace(_motDePasse))
+            {
+                Console.WriteLine($"[MAIL non envoyé — SMTP non configuré]\nÀ : {destinataire}\nSujet : {sujet}\n{corps}\n");
+                return;
+            }
+
             using (var message = new MailMessage(_expediteur, destinataire, sujet, corps) { IsBodyHtml = false })
             using (var client = new SmtpClient(_hote, _port))
             {
-               
-
+                client.EnableSsl = _ssl;
+                client.Credentials = new NetworkCredential(_expediteur, _motDePasse);
+                client.Send(message);
             }
+        }
+
+        public void EnvoyerCodeReinitialisation(string destinataire, string code, int heuresValidite)
+        {
+            const string sujet = "Réinitialisation de votre mot de passe";
+            string corps =
+                $"Bonjour,\n\nVoici votre code de réinitialisation : {code}\n\n" +
+                $"Il est valable {heuresValidite} heures et ne peut servir qu'une seule fois.\n" +
+                "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.";
+
+            Envoyer(destinataire, sujet, corps);
+        }
+
+        public void EnvoyerCodeActivation(string destinataire, string code, int joursValidite)
+        {
+            const string sujet = "Activation de votre compte";
+            string corps =
+                $"Bonjour,\n\nUn compte vient d'être créé pour vous sur l'application de " +
+                $"gestion des entretiens.\n\nVoici votre code d'activation : {code}\n\n" +
+                $"Il est valable {joursValidite} jours et ne peut servir qu'une seule fois. " +
+                "Saisissez-le avec le mot de passe de votre choix pour activer votre compte.\n" +
+                "Passé ce délai, utilisez « mot de passe oublié » pour en recevoir un nouveau.";
+
+            Envoyer(destinataire, sujet, corps);
         }
 
         public void NotifierEntretien(Entretien entretien, TypeNotification type)

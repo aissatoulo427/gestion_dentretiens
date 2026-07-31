@@ -1,22 +1,32 @@
 {
   "info": {
     "name": "Gestion des entretiens - API",
-    "description": "Collection de l'API de planification des entretiens (ASP.NET Core). Utilise l'environnement 'Gestion entretiens - Local'. Les id crees sont captures automatiquement (recruteurId, candidatId, managerId, demandeId, creneauId, entretienId) : lance les requetes dans l'ordre du scenario. Enums en texte (RH, Presentiel, Favorable...).",
+    "description": "Collection de l'API de planification des entretiens (ASP.NET Core). Utilise l'environnement 'Gestion entretiens - Local'. IMPORTANT : l'inscription publique n'existe plus. Connecte-toi d'abord en Admin (compte cree au demarrage depuis Admin:Email / Admin:MotDePasse), cree les comptes, puis active-les avec le code recu par e-mail (ou affiche dans la console si le SMTP n'est pas configure). Les id crees sont captures automatiquement. Enums en texte (RH, Presentiel, Favorable...).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:5062", "type": "string" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:5062",
+      "type": "string"
+    }
   ],
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
   },
   "item": [
     {
       "name": "Auth",
       "item": [
         {
-          "name": "Login (recruteur/manager) -> capture le token",
+          "name": "1. Login Admin -> capture le token",
           "event": [
             {
               "listen": "test",
@@ -32,19 +42,108 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"recruteur.ndiaye@example.com\",\n  \"motDePasse\": \"Secret123!\"\n}"
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"motDePasse\": \"{{adminMotDePasse}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
             },
-            "description": "Renvoie un JWT. Le token est capture automatiquement dans la variable {{token}} et reutilise par toutes les autres requetes."
+            "description": "Le compte admin est cree au demarrage de l'application depuis la configuration (Admin:Email / Admin:MotDePasse). Renseigne adminEmail et adminMotDePasse dans l'environnement avec les memes valeurs."
+          }
+        },
+        {
+          "name": "3. Activer le compte RH",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rh.ndiaye@example.com\",\n  \"code\": \"REMPLACE_PAR_LE_CODE\",\n  \"nouveauMotDePasse\": \"MonMotDePasse1!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/activer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "activer"
+              ]
+            },
+            "description": "Colle le code a 6 chiffres recu par e-mail. Si le SMTP n'est pas configure, le mail est ecrit dans la console de l'API : cherche la ligne [MAIL non envoye]. Code valable 7 jours ; expire, redemande-en un via /auth/mot-de-passe-oublie."
+          }
+        },
+        {
+          "name": "4. Login RH (apres activation) -> capture le token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.environment.set('token', pm.response.json().token);",
+                  "  console.log('token capture, role =', pm.response.json().role);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rh.ndiaye@example.com\",\n  \"motDePasse\": \"MonMotDePasse1!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "A lancer APRES avoir active le compte RH. Ecrase le token admin : toute la suite du scenario (candidats, demandes, creneaux, entretiens) se fait en RH."
           }
         }
       ]
@@ -53,7 +152,7 @@
       "name": "Personnes",
       "item": [
         {
-          "name": "Creer un recruteur",
+          "name": "2. Creer un RH (Admin)",
           "event": [
             {
               "listen": "test",
@@ -61,27 +160,37 @@
                 "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 200 || pm.response.code === 201) {",
-                  "  pm.environment.set('recruteurId', pm.response.json().id);",
-                  "  console.log('recruteurId =', pm.response.json().id);",
+                  "  pm.environment.set('rhId', pm.response.json().id);",
+                  "  console.log('rhId =', pm.response.json().id);",
                   "}"
                 ]
               }
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nom\": \"Ndiaye\",\n  \"email\": \"recruteur.ndiaye@example.com\",\n  \"motDePasse\": \"Secret123!\"\n}"
+              "raw": "{\n  \"nom\": \"Ndiaye\",\n  \"email\": \"rh.ndiaye@example.com\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/personnes/recruteurs",
-              "host": ["{{base_url}}"],
-              "path": ["api", "personnes", "recruteurs"]
+              "raw": "{{base_url}}/api/personnes/rh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "rh"
+              ]
             },
-            "description": "Inscription (endpoint public). A faire AVANT le login."
+            "description": "Reserve a l'Admin. Pas de motDePasse : un code d'activation part par e-mail, le titulaire choisit son mot de passe via /auth/activer."
           }
         },
         {
@@ -102,20 +211,31 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nom\": \"Diop\",\n  \"prenom\": \"Awa\",\n  \"email\": \"awa.diop@example.com\",\n  \"telephone\": \"770000000\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/personnes/candidats",
-              "host": ["{{base_url}}"],
-              "path": ["api", "personnes", "candidats"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "candidats"
+              ]
             }
           }
         },
         {
-          "name": "Creer un manager",
+          "name": "2. Creer un manager (Admin)",
           "event": [
             {
               "listen": "test",
@@ -131,19 +251,71 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nom\": \"Fall\",\n  \"email\": \"manager.fall@example.com\",\n  \"motDePasse\": \"Secret123!\"\n}"
+              "raw": "{\n  \"nom\": \"Fall\",\n  \"email\": \"manager.fall@example.com\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/personnes/managers",
-              "host": ["{{base_url}}"],
-              "path": ["api", "personnes", "managers"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "managers"
+              ]
             },
-            "description": "Inscription (endpoint public)."
+            "description": "Reserve a l'Admin. Pas de motDePasse : un code d'activation part par e-mail, le titulaire choisit son mot de passe via /auth/activer."
+          }
+        },
+        {
+          "name": "2. Creer un evaluateur technique (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  pm.environment.set('evaluateurTechniqueId', pm.response.json().id);",
+                  "  console.log('evaluateurTechniqueId =', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Sow\",\n  \"email\": \"tech.sow@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/personnes/evaluateurs-techniques",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "evaluateurs-techniques"
+              ]
+            },
+            "description": "Reserve a l'Admin. Pas de motDePasse : un code d'activation part par e-mail, le titulaire choisit son mot de passe via /auth/activer."
           }
         },
         {
@@ -153,20 +325,32 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/personnes/candidats",
-              "host": ["{{base_url}}"],
-              "path": ["api", "personnes", "candidats"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "candidats"
+              ]
             }
           }
         },
         {
-          "name": "Lister les recruteurs",
+          "name": "Lister les RH",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/personnes/recruteurs",
-              "host": ["{{base_url}}"],
-              "path": ["api", "personnes", "recruteurs"]
+              "raw": "{{base_url}}/api/personnes/rh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "rh"
+              ]
             }
           }
         },
@@ -177,8 +361,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/personnes/managers",
-              "host": ["{{base_url}}"],
-              "path": ["api", "personnes", "managers"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "managers"
+              ]
             }
           }
         },
@@ -189,9 +379,64 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/personnes/{{candidatId}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "personnes", "{{candidatId}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "{{candidatId}}"
+              ]
             }
+          }
+        },
+        {
+          "name": "Corriger un candidat",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Diop\",\n  \"prenom\": \"Awa\",\n  \"email\": \"awa.diop@example.com\",\n  \"telephone\": \"770000001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/personnes/candidats/{{candidatId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "candidats",
+                "{{candidatId}}"
+              ]
+            },
+            "description": "RH seulement. Les 4 champs sont remplaces : renvoie aussi ceux que tu ne modifies pas."
+          }
+        },
+        {
+          "name": "Supprimer un candidat",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/personnes/candidats/{{candidatId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "personnes",
+                "candidats",
+                "{{candidatId}}"
+              ]
+            },
+            "description": "RH seulement. Refuse en 400 si le candidat a deja des demandes ou des entretiens : dans le scenario complet, cette requete echouera donc, et c'est le comportement attendu."
           }
         }
       ]
@@ -206,8 +451,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/demandes",
-              "host": ["{{base_url}}"],
-              "path": ["api", "demandes"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "demandes"
+              ]
             }
           }
         },
@@ -229,15 +479,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"recruteurId\": {{recruteurId}},\n  \"candidatId\": {{candidatId}},\n  \"poste\": \"Developpeur .NET\",\n  \"typeEntretien\": \"RH\"\n}"
+              "raw": "{\n  \"candidatId\": {{candidatId}},\n  \"poste\": \"Developpeur .NET\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/demandes",
-              "host": ["{{base_url}}"],
-              "path": ["api", "demandes"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "demandes"
+              ]
             },
             "description": "typeEntretien : RH | Technique | Managerial"
           }
@@ -249,8 +509,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/demandes/{{demandeId}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "demandes", "{{demandeId}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "demandes",
+                "{{demandeId}}"
+              ]
             }
           }
         },
@@ -261,8 +527,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/demandes/{{demandeId}}/creneaux-disponibles",
-              "host": ["{{base_url}}"],
-              "path": ["api", "demandes", "{{demandeId}}", "creneaux-disponibles"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "demandes",
+                "{{demandeId}}",
+                "creneaux-disponibles"
+              ]
             }
           }
         },
@@ -273,9 +546,44 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/demandes/{{demandeId}}/annuler",
-              "host": ["{{base_url}}"],
-              "path": ["api", "demandes", "{{demandeId}}", "annuler"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "demandes",
+                "{{demandeId}}",
+                "annuler"
+              ]
             }
+          }
+        },
+        {
+          "name": "Corriger le poste d'une demande",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"poste\": \"Developpeur .NET senior\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/demandes/{{demandeId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "demandes",
+                "{{demandeId}}"
+              ]
+            },
+            "description": "RH seulement. Seul le poste est modifiable."
           }
         }
       ]
@@ -290,8 +598,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/creneaux",
-              "host": ["{{base_url}}"],
-              "path": ["api", "creneaux"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "creneaux"
+              ]
             }
           }
         },
@@ -302,8 +615,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/creneaux/{{creneauId}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "creneaux", "{{creneauId}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "creneaux",
+                "{{creneauId}}"
+              ]
             }
           }
         },
@@ -325,15 +644,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"recruteurId\": {{recruteurId}},\n  \"dateDebut\": \"2026-07-20T09:00:00\",\n  \"dateFin\": \"2026-07-20T10:00:00\"\n}"
+              "raw": "{\n  \"dateDebut\": \"2026-07-20T09:00:00\",\n  \"dateFin\": \"2026-07-20T10:00:00\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/creneaux",
-              "host": ["{{base_url}}"],
-              "path": ["api", "creneaux"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "creneaux"
+              ]
             }
           }
         },
@@ -344,11 +673,42 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/creneaux/{{creneauId}}/proposer?demandeId={{demandeId}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "creneaux", "{{creneauId}}", "proposer"],
-              "query": [{ "key": "demandeId", "value": "{{demandeId}}" }]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "creneaux",
+                "{{creneauId}}",
+                "proposer"
+              ],
+              "query": [
+                {
+                  "key": "demandeId",
+                  "value": "{{demandeId}}"
+                }
+              ]
             },
             "description": "L'id du creneau est dans l'URL ; la demande cible est passee en query string."
+          }
+        },
+        {
+          "name": "Supprimer un creneau",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/creneaux/{{creneauId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "creneaux",
+                "{{creneauId}}"
+              ]
+            },
+            "description": "Seul le proprietaire du creneau peut le supprimer (403 sinon). Refuse aussi si le creneau est reserve par un entretien, ou s'il reste rattache a un entretien annule. Pas de PUT : pour corriger un horaire, supprimer puis recreer."
           }
         }
       ]
@@ -374,17 +734,27 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"demandeId\": {{demandeId}},\n  \"creneauId\": {{creneauId}},\n  \"dateHeure\": \"2026-07-20T09:00:00\",\n  \"modalite\": \"Presentiel\",\n  \"lieuOuLien\": \"Salle A / https://meet.example.com/abc\"\n}"
+              "raw": "{\n  \"demandeId\": {{demandeId}},\n  \"creneauId\": {{creneauId}},\n  \"modalite\": \"Presentiel\",\n  \"lieuOuLien\": \"Salle A / https://meet.example.com/abc\",\n  \"typeEntretien\": \"Technique\",\n  \"evaluateurIds\": [{{evaluateurTechniqueId}}, {{rhId}}]\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/entretiens",
-              "host": ["{{base_url}}"],
-              "path": ["api", "entretiens"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entretiens"
+              ]
             },
-            "description": "modalite : Presentiel | Distanciel | Telephone"
+            "description": "Le panel doit contenir au moins un evaluateur du role exige par typeEntretien : ici Technique, donc un evaluateur technique. Le RH est ajoute en plus (la regle impose une presence, elle n'exclut personne) car c'est lui qui saisit le compte-rendu ensuite."
           }
         },
         {
@@ -394,8 +764,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/entretiens",
-              "host": ["{{base_url}}"],
-              "path": ["api", "entretiens"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entretiens"
+              ]
             }
           }
         },
@@ -406,8 +781,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/entretiens/{{entretienId}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "entretiens", "{{entretienId}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entretiens",
+                "{{entretienId}}"
+              ]
             }
           }
         },
@@ -418,8 +799,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/entretiens/{{entretienId}}/confirmer",
-              "host": ["{{base_url}}"],
-              "path": ["api", "entretiens", "{{entretienId}}", "confirmer"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entretiens",
+                "{{entretienId}}",
+                "confirmer"
+              ]
             }
           }
         },
@@ -427,15 +815,27 @@
           "name": "Reprogrammer un entretien",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nouveauCreneauId\": {{creneauId}},\n  \"nouvelleDateHeure\": \"2026-07-21T14:00:00\"\n}"
+              "raw": "{\n  \"nouveauCreneauId\": {{creneauId}}\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/entretiens/{{entretienId}}/reprogrammer",
-              "host": ["{{base_url}}"],
-              "path": ["api", "entretiens", "{{entretienId}}", "reprogrammer"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entretiens",
+                "{{entretienId}}",
+                "reprogrammer"
+              ]
             },
             "description": "nouveauCreneauId doit idealement etre un AUTRE creneau (cree un 2e creneau au prealable)."
           }
@@ -447,8 +847,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/entretiens/{{entretienId}}/rappel",
-              "host": ["{{base_url}}"],
-              "path": ["api", "entretiens", "{{entretienId}}", "rappel"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entretiens",
+                "{{entretienId}}",
+                "rappel"
+              ]
             }
           }
         }
@@ -461,17 +868,27 @@
           "name": "Saisir un feedback",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"entretienId\": {{entretienId}},\n  \"auteurId\": {{managerId}},\n  \"note\": 4,\n  \"commentaire\": \"Bon profil technique, a confirmer sur la partie communication.\",\n  \"decision\": \"Favorable\"\n}"
+              "raw": "{\n  \"entretienId\": {{entretienId}},\n  \"note\": 4,\n  \"commentaire\": \"Bon profil technique, a confirmer sur la partie communication.\",\n  \"decision\": \"Favorable\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/feedbacks",
-              "host": ["{{base_url}}"],
-              "path": ["api", "feedbacks"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "feedbacks"
+              ]
             },
-            "description": "note : 0..5 ; decision : Favorable | Defavorable | ARevoir ; auteurId doit etre un recruteur ou un manager (ici le manager)."
+            "description": "note : 0..5 ; decision : Favorable | Defavorable | ARevoir. L'auteur est l'utilisateur connecte (le RH du login), qui doit figurer dans les evaluateurs de l'entretien."
           }
         },
         {
@@ -481,9 +898,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/feedbacks?entretienId={{entretienId}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "feedbacks"],
-              "query": [{ "key": "entretienId", "value": "{{entretienId}}" }]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "feedbacks"
+              ],
+              "query": [
+                {
+                  "key": "entretienId",
+                  "value": "{{entretienId}}"
+                }
+              ]
             }
           }
         }

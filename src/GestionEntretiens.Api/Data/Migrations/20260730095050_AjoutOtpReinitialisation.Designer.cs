@@ -3,17 +3,20 @@ using System;
 using Gestion_dentretiens.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace GestionEntretiens.Infrastructure.Migrations
+namespace GestionEntretiens.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260730095050_AjoutOtpReinitialisation")]
+    partial class AjoutOtpReinitialisation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,21 +24,6 @@ namespace GestionEntretiens.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("EmployeEntretien", b =>
-                {
-                    b.Property<int>("EntretiensId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("EvaluateursId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("EntretiensId", "EvaluateursId");
-
-                    b.HasIndex("EvaluateursId");
-
-                    b.ToTable("EntretienEvaluateurs", (string)null);
-                });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.Creneau", b =>
                 {
@@ -57,14 +45,14 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.Property<bool>("Disponible")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("EmployeId")
+                    b.Property<int>("RecruteurId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DemandeEntretienId");
 
-                    b.HasIndex("EmployeId");
+                    b.HasIndex("RecruteurId");
 
                     b.ToTable("Creneaux");
                 });
@@ -86,17 +74,20 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.Property<string>("Poste")
                         .HasColumnType("text");
 
-                    b.Property<int>("RhId")
+                    b.Property<int>("RecruteurId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Statut")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TypeEntretien")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CandidatId");
 
-                    b.HasIndex("RhId");
+                    b.HasIndex("RecruteurId");
 
                     b.ToTable("Demandes");
                 });
@@ -127,10 +118,10 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.Property<int>("Modalite")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Statut")
+                    b.Property<int>("RecruteurId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TypeEntretien")
+                    b.Property<int>("Statut")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -140,6 +131,8 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.HasIndex("CreneauId");
 
                     b.HasIndex("DemandeEntretienId");
+
+                    b.HasIndex("RecruteurId");
 
                     b.ToTable("Entretiens");
                 });
@@ -187,16 +180,28 @@ namespace GestionEntretiens.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CodeReinitialisation")
+                        .HasColumnType("text");
+
                     b.Property<string>("Discriminator")
                         .IsRequired()
-                        .HasMaxLength(21)
-                        .HasColumnType("character varying(21)");
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
 
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("ExpirationCode")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("MotDePasse")
+                        .HasColumnType("text");
+
                     b.Property<string>("Nom")
                         .HasColumnType("text");
+
+                    b.Property<int>("TentativesCode")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -220,66 +225,18 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.HasDiscriminator().HasValue("Candidat");
                 });
 
-            modelBuilder.Entity("Gestion_dentretiens.Models.Employe", b =>
-                {
-                    b.HasBaseType("Gestion_dentretiens.Models.Personne");
-
-                    b.Property<string>("CodeReinitialisation")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ExpirationCode")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("MotDePasse")
-                        .HasColumnType("text");
-
-                    b.Property<int>("TentativesCode")
-                        .HasColumnType("integer");
-
-                    b.HasDiscriminator().HasValue("Employe");
-                });
-
-            modelBuilder.Entity("Gestion_dentretiens.Models.Admin", b =>
-                {
-                    b.HasBaseType("Gestion_dentretiens.Models.Employe");
-
-                    b.HasDiscriminator().HasValue("Admin");
-                });
-
-            modelBuilder.Entity("Gestion_dentretiens.Models.EvaluateurTechnique", b =>
-                {
-                    b.HasBaseType("Gestion_dentretiens.Models.Employe");
-
-                    b.HasDiscriminator().HasValue("EvaluateurTechnique");
-                });
-
             modelBuilder.Entity("Gestion_dentretiens.Models.Manager", b =>
                 {
-                    b.HasBaseType("Gestion_dentretiens.Models.Employe");
+                    b.HasBaseType("Gestion_dentretiens.Models.Personne");
 
                     b.HasDiscriminator().HasValue("Manager");
                 });
 
-            modelBuilder.Entity("Gestion_dentretiens.Models.RH", b =>
+            modelBuilder.Entity("Gestion_dentretiens.Models.Recruteur", b =>
                 {
-                    b.HasBaseType("Gestion_dentretiens.Models.Employe");
+                    b.HasBaseType("Gestion_dentretiens.Models.Personne");
 
-                    b.HasDiscriminator().HasValue("RH");
-                });
-
-            modelBuilder.Entity("EmployeEntretien", b =>
-                {
-                    b.HasOne("Gestion_dentretiens.Models.Entretien", null)
-                        .WithMany()
-                        .HasForeignKey("EntretiensId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Gestion_dentretiens.Models.Employe", null)
-                        .WithMany()
-                        .HasForeignKey("EvaluateursId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasDiscriminator().HasValue("Recruteur");
                 });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.Creneau", b =>
@@ -289,15 +246,15 @@ namespace GestionEntretiens.Infrastructure.Migrations
                         .HasForeignKey("DemandeEntretienId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Gestion_dentretiens.Models.Employe", "Employe")
+                    b.HasOne("Gestion_dentretiens.Models.Recruteur", "Recruteur")
                         .WithMany("Creneaux")
-                        .HasForeignKey("EmployeId")
+                        .HasForeignKey("RecruteurId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("DemandeEntretien");
 
-                    b.Navigation("Employe");
+                    b.Navigation("Recruteur");
                 });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.DemandeEntretien", b =>
@@ -308,15 +265,15 @@ namespace GestionEntretiens.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Gestion_dentretiens.Models.RH", "RH")
+                    b.HasOne("Gestion_dentretiens.Models.Recruteur", "Recruteur")
                         .WithMany("Demandes")
-                        .HasForeignKey("RhId")
+                        .HasForeignKey("RecruteurId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Candidat");
 
-                    b.Navigation("RH");
+                    b.Navigation("Recruteur");
                 });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.Entretien", b =>
@@ -333,8 +290,14 @@ namespace GestionEntretiens.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Gestion_dentretiens.Models.DemandeEntretien", "DemandeEntretien")
-                        .WithMany("Entretiens")
+                        .WithMany()
                         .HasForeignKey("DemandeEntretienId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Gestion_dentretiens.Models.Recruteur", "Recruteur")
+                        .WithMany("Entretiens")
+                        .HasForeignKey("RecruteurId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -343,11 +306,13 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.Navigation("Creneau");
 
                     b.Navigation("DemandeEntretien");
+
+                    b.Navigation("Recruteur");
                 });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.Feedback", b =>
                 {
-                    b.HasOne("Gestion_dentretiens.Models.Employe", "Auteur")
+                    b.HasOne("Gestion_dentretiens.Models.Personne", "Auteur")
                         .WithMany()
                         .HasForeignKey("AuteurId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -367,8 +332,6 @@ namespace GestionEntretiens.Infrastructure.Migrations
             modelBuilder.Entity("Gestion_dentretiens.Models.DemandeEntretien", b =>
                 {
                     b.Navigation("Creneaux");
-
-                    b.Navigation("Entretiens");
                 });
 
             modelBuilder.Entity("Gestion_dentretiens.Models.Entretien", b =>
@@ -383,14 +346,13 @@ namespace GestionEntretiens.Infrastructure.Migrations
                     b.Navigation("Entretiens");
                 });
 
-            modelBuilder.Entity("Gestion_dentretiens.Models.Employe", b =>
+            modelBuilder.Entity("Gestion_dentretiens.Models.Recruteur", b =>
                 {
                     b.Navigation("Creneaux");
-                });
 
-            modelBuilder.Entity("Gestion_dentretiens.Models.RH", b =>
-                {
                     b.Navigation("Demandes");
+
+                    b.Navigation("Entretiens");
                 });
 #pragma warning restore 612, 618
         }
